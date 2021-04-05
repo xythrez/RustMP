@@ -43,66 +43,66 @@ fn aug_main() {
  * Current implementation is still ad-hoc, but hopefully the
  * macro would expand the function as designed.
  *
- * Number of threads RMP_INTERNAL_MAX_THREADS = 4
+ * Number of threads __rmp_internal_max_threads = 4
  */
 fn rmp_main() {
     let mut counter = 0;
 
     fn _loop(counter: &mut i32) {
     // Startup - Populate environment variables using env::var
-    let RMP_INTERNAL_MAX_THREADS = 4;
+    let __rmp_internal_max_threads = 4;
 
     // Startup - Populate macro parameters
-    let RMP_INTERNAL_BLOCK_SIZE = 1;
+    let __rmp_internal_block_size = 1;
 
     // Startup - Initialize required arrays
-    let mut RMP_INTERNAL_THREADS_ARR = vec![];
-    let mut RMP_INTERNAL_ITER_ARR = vec![];
-    for _ in 0..RMP_INTERNAL_MAX_THREADS {
-        RMP_INTERNAL_ITER_ARR.push(vec![]);
+    let mut __rmp_internal_threads_arr = vec![];
+    let mut __rmp_internal_iter_arr = vec![];
+    for _ in 0..__rmp_internal_max_threads {
+        __rmp_internal_iter_arr.push(vec![]);
     }
-    let mut RMP_INTERNAL_CURR_BLOCK_SIZE = 0;
-    let mut RMP_INTERNAL_CURR_BLOCK_THREAD = 0;
+    let mut __rmp_internal_curr_block_size = 0;
+    let mut __rmp_internal_curr_block_thread = 0;
 
     // Startup - Promote shared mutables into Arc references
     // Idea - Possible optimization based on type? RwLock is expensive.
-    let RMP_VAR_counter = Arc::new(AtomicI32::new(*counter));
+    let __rmp_var_counter = Arc::new(AtomicI32::new(*counter));
 
     // Execution - Precompute the iterations for each loop
     // The 0..4 here should be parsed from the original tokens
-    for RMP_INTERNAL_I in 0..4 {
-        RMP_INTERNAL_ITER_ARR[RMP_INTERNAL_CURR_BLOCK_THREAD].push(RMP_INTERNAL_I);
-        RMP_INTERNAL_CURR_BLOCK_SIZE += 1;
-        if RMP_INTERNAL_CURR_BLOCK_SIZE >= RMP_INTERNAL_BLOCK_SIZE {
-            RMP_INTERNAL_CURR_BLOCK_THREAD = (RMP_INTERNAL_CURR_BLOCK_THREAD + 1) % RMP_INTERNAL_MAX_THREADS;
+    for __rmp_internal_i in 0..4 {
+        __rmp_internal_iter_arr[__rmp_internal_curr_block_thread].push(__rmp_internal_i);
+        __rmp_internal_curr_block_size += 1;
+        if __rmp_internal_curr_block_size >= __rmp_internal_block_size {
+            __rmp_internal_curr_block_thread = (__rmp_internal_curr_block_thread + 1) % __rmp_internal_max_threads;
         }
     }
 
     // Execution - Spawn threads with loop contents
-    for RMP_INTERNAL_ITER in RMP_INTERNAL_ITER_ARR {
+    for __rmp_internal_iter in __rmp_internal_iter_arr {
         // Clone used Arcs here
-        let RMP_VAR_counter = Arc::clone(&RMP_VAR_counter);
+        let __rmp_var_counter = Arc::clone(&__rmp_var_counter);
 
         // Spawn threads
-        RMP_INTERNAL_THREADS_ARR.push(thread::spawn(move || {
-            for i in RMP_INTERNAL_ITER {
+        __rmp_internal_threads_arr.push(thread::spawn(move || {
+            for i in __rmp_internal_iter {
                 // Having separate load and fetch_add should be a data race,
                 // However, I believe OpenMP also treats it as a data race,
                 // so its fine to have this issue
                 // Need to implement #[rmp_critical] to update it correctly
-                println!("Index {}: Hello from loop {}!", RMP_VAR_counter.load(Ordering::SeqCst), i);
-                RMP_VAR_counter.fetch_add(1, Ordering::SeqCst);
+                println!("Index {}: Hello from loop {}!", __rmp_var_counter.load(Ordering::SeqCst), i);
+                __rmp_var_counter.fetch_add(1, Ordering::SeqCst);
             }
         }));
     }
 
     // Cleanup - Wait for threads
-    for RMP_INTERNAL_THREAD in RMP_INTERNAL_THREADS_ARR {
-        let _ = RMP_INTERNAL_THREAD.join();
+    for __rmp_internal_thread in __rmp_internal_threads_arr {
+        let _ = __rmp_internal_thread.join();
     }
 
     // Cleanup - Restore variables from Arc references
-    *counter = RMP_VAR_counter.load(Ordering::SeqCst);
+    *counter = __rmp_var_counter.load(Ordering::SeqCst);
     } _loop(&mut counter);
 }
 
