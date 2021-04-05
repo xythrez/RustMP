@@ -1,8 +1,10 @@
-use std::sync::*;
-//use std::sync::RwLock;
-use std::sync::atomic::*;
-use std::thread;
-//use rustmp::rmp_parallel_for;
+// libraries used:
+// std::sync::Arc;
+// std::sync::RwLock;
+// std::sync::atomic::AtomicIsize;
+// std::sync::atomic::AtomicI32;
+// std::sync::atomic::Ordering;
+// std::thread;
 
 /*
  * A basic sequential function that we want to modify.
@@ -32,10 +34,12 @@ fn aug_main() {
 
     //#[rmp_parallel_for(shared(counter) schedule(static, 1))]
     fn _loop(counter: &mut i32) {
-    for i in 0..4 {
-        println!("Index {}: Hello from loop {}!", counter, i);
-        *counter += 1;
-    }} _loop(&mut counter);
+        for i in 0..4 {
+            println!("Index {}: Hello from loop {}!", counter, i);
+            *counter += 1;
+        }
+    }
+    _loop(&mut counter);
 }
 
 /*
@@ -49,70 +53,80 @@ fn rmp_main() {
     let mut counter = 0;
 
     fn _loop(counter: &mut i32) {
-    // Startup - Populate environment variables using env::var
-    let __rmp_internal_max_threads = 4;
+        // Startup - Populate environment variables using env::var
+        let __rmp_internal_max_threads = 4;
 
-    // Startup - Populate macro parameters
-    let __rmp_internal_block_size = 1;
+        // Startup - Populate macro parameters
+        let __rmp_internal_block_size = 1;
 
-    // Startup - Initialize required arrays
-    let mut __rmp_internal_threads_arr = vec![];
-    let mut __rmp_internal_iter_arr = vec![];
-    for _ in 0..__rmp_internal_max_threads {
-        __rmp_internal_iter_arr.push(vec![]);
-    }
-    let mut __rmp_internal_curr_block_size = 0;
-    let mut __rmp_internal_curr_block_thread = 0;
-
-    // Startup - Promote shared mutables into Arc references
-    // Idea - Possible optimization based on type? RwLock is expensive.
-    let __rmp_var_counter = Arc::new(AtomicI32::new(*counter));
-
-    // Execution - Precompute the iterations for each loop
-    // The 0..4 here should be parsed from the original tokens
-    for __rmp_internal_i in 0..4 {
-        __rmp_internal_iter_arr[__rmp_internal_curr_block_thread].push(__rmp_internal_i);
-        __rmp_internal_curr_block_size += 1;
-        if __rmp_internal_curr_block_size >= __rmp_internal_block_size {
-            __rmp_internal_curr_block_thread = (__rmp_internal_curr_block_thread + 1) % __rmp_internal_max_threads;
+        // Startup - Initialize required arrays
+        let mut __rmp_internal_threads_arr = vec![];
+        let mut __rmp_internal_iter_arr = vec![];
+        for _ in 0..__rmp_internal_max_threads {
+            __rmp_internal_iter_arr.push(vec![]);
         }
-    }
+        let mut __rmp_internal_curr_block_size = 0;
+        let mut __rmp_internal_curr_block_thread = 0;
 
-    // Startup - Extract the thread's own iterator
-    let __rmp_internal_iter_self = __rmp_internal_iter_arr.remove(0);
+        // Startup - Promote shared mutables into Arc references
+        // Idea - Possible optimization based on type? RwLock is expensive.
+        let __rmp_var_counter = std::sync::Arc::new(std::sync::atomic::AtomicI32::new(*counter));
 
-    // Execution - Spawn threads with loop contents
-    for __rmp_internal_iter in __rmp_internal_iter_arr {
-        // Clone used Arcs here
-        let __rmp_var_counter = Arc::clone(&__rmp_var_counter);
-
-        // Spawn threads
-        __rmp_internal_threads_arr.push(thread::spawn(move || {
-            for i in __rmp_internal_iter {
-                // Having separate load and fetch_add should be a data race,
-                // However, I believe OpenMP also treats it as a data race,
-                // so its fine to have this issue
-                // Need to implement #[rmp_critical] to update it correctly
-                println!("Index {}: Hello from loop {}!", __rmp_var_counter.load(Ordering::SeqCst), i);
-                __rmp_var_counter.fetch_add(1, Ordering::SeqCst);
+        // Execution - Precompute the iterations for each loop
+        // The 0..4 here should be parsed from the original tokens
+        for __rmp_internal_i in 0..4 {
+            __rmp_internal_iter_arr[__rmp_internal_curr_block_thread].push(__rmp_internal_i);
+            __rmp_internal_curr_block_size += 1;
+            if __rmp_internal_curr_block_size >= __rmp_internal_block_size {
+                __rmp_internal_curr_block_thread =
+                    (__rmp_internal_curr_block_thread + 1) % __rmp_internal_max_threads;
             }
-        }));
-    }
+        }
 
-    // Execution - Extract the same thread logic for self
-    for i in __rmp_internal_iter_self {
-        println!("Index {}: Hello from loop {}!", __rmp_var_counter.load(Ordering::SeqCst), i);
-        __rmp_var_counter.fetch_add(1, Ordering::SeqCst);
-    }
+        // Startup - Extract the thread's own iterator
+        let __rmp_internal_iter_self = __rmp_internal_iter_arr.remove(0);
 
-    // Cleanup - Wait for threads
-    for __rmp_internal_thread in __rmp_internal_threads_arr {
-        let _ = __rmp_internal_thread.join();
-    }
+        // Execution - Spawn threads with loop contents
+        for __rmp_internal_iter in __rmp_internal_iter_arr {
+            // Clone used Arcs here
+            let __rmp_var_counter = std::sync::Arc::clone(&__rmp_var_counter);
 
-    // Cleanup - Restore variables from Arc references
-    *counter = __rmp_var_counter.load(Ordering::SeqCst);
-    } _loop(&mut counter);
+            // Spawn threads
+            __rmp_internal_threads_arr.push(std::thread::spawn(move || {
+                for i in __rmp_internal_iter {
+                    // Having separate load and fetch_add should be a data race,
+                    // However, I believe OpenMP also treats it as a data race,
+                    // so its fine to have this issue
+                    // Need to implement #[rmp_critical] to update it correctly
+                    println!(
+                        "Index {}: Hello from loop {}!",
+                        __rmp_var_counter.load(std::sync::atomic::Ordering::SeqCst),
+                        i
+                    );
+                    __rmp_var_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            }));
+        }
+
+        // Execution - Extract the same thread logic for self
+        for i in __rmp_internal_iter_self {
+            println!(
+                "Index {}: Hello from loop {}!",
+                __rmp_var_counter.load(std::sync::atomic::Ordering::SeqCst),
+                i
+            );
+            __rmp_var_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        }
+
+        // Cleanup - Wait for threads
+        for __rmp_internal_thread in __rmp_internal_threads_arr {
+            let _ = __rmp_internal_thread.join();
+        }
+
+        // Cleanup - Restore variables from Arc references
+        *counter = __rmp_var_counter.load(std::sync::atomic::Ordering::SeqCst);
+    }
+    _loop(&mut counter);
 }
 
 /*
@@ -120,24 +134,23 @@ fn rmp_main() {
  * possible.
  */
 fn par_main() {
-    let counter = Arc::new(AtomicIsize::new(0));
+    let counter = std::sync::Arc::new(std::sync::atomic::AtomicIsize::new(0));
     let mut children = vec![];
 
     for i in 1..4 {
-        let counter = Arc::clone(&counter);
-        children.push(thread::spawn(move || {
-            let index = counter.fetch_add(1, Ordering::SeqCst);
+        let counter = std::sync::Arc::clone(&counter);
+        children.push(std::thread::spawn(move || {
+            let index = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
             println!("Index {}: Hello from loop {}!", index, i);
         }));
     }
-    let index = counter.fetch_add(1, Ordering::SeqCst);
+    let index = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     println!("Index {}: Hello from loop {}!", index, 0);
 
     for child in children {
         let _ = child.join();
     }
 }
-
 
 fn main() {
     println!("Running Sequential Version:");
