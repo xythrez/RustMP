@@ -78,6 +78,9 @@ fn rmp_main() {
         }
     }
 
+    // Startup - Extract the thread's own iterator
+    let __rmp_internal_iter_self = __rmp_internal_iter_arr.remove(0);
+
     // Execution - Spawn threads with loop contents
     for __rmp_internal_iter in __rmp_internal_iter_arr {
         // Clone used Arcs here
@@ -94,6 +97,12 @@ fn rmp_main() {
                 __rmp_var_counter.fetch_add(1, Ordering::SeqCst);
             }
         }));
+    }
+
+    // Execution - Extract the same thread logic for self
+    for i in __rmp_internal_iter_self {
+        println!("Index {}: Hello from loop {}!", __rmp_var_counter.load(Ordering::SeqCst), i);
+        __rmp_var_counter.fetch_add(1, Ordering::SeqCst);
     }
 
     // Cleanup - Wait for threads
@@ -114,13 +123,15 @@ fn par_main() {
     let counter = Arc::new(AtomicIsize::new(0));
     let mut children = vec![];
 
-    for i in 0..4 {
+    for i in 1..4 {
         let counter = Arc::clone(&counter);
         children.push(thread::spawn(move || {
             let index = counter.fetch_add(1, Ordering::SeqCst);
             println!("Index {}: Hello from loop {}!", index, i);
         }));
     }
+    let index = counter.fetch_add(1, Ordering::SeqCst);
+    println!("Index {}: Hello from loop {}!", index, 0);
 
     for child in children {
         let _ = child.join();
