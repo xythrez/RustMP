@@ -4,6 +4,8 @@ mod sysinfo;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
+pub use threadpool::{as_static_job, Job, ThreadPoolManager};
+
 pub struct Capture<T> {
     value: Arc<RwLock<T>>,
 }
@@ -38,41 +40,49 @@ impl<T> Capture<T> {
 }
 
 #[macro_export]
-macro_rules! par_for {
-    (for $name:ident in $iterator:expr, capturing $captured:ident $blk:block) => {
-        use rustmp::Capture;
-        use rustmp::threadpool::{Job, ThreadPoolManager, as_static_job};
-        use std::sync::{Arc, RwLock};
-        use std::thread;
-
-        let mut tasks = Vec::new();
-        let $captured = Capture::new($captured);
+macro_rules! __internal_par_for {
+    ($name:ident, $iterator:expr, $size:expr, $($captured:ident)*, $blk:block) => {
+        let mut __rmp_tasks = Vec::new();
+        $(let $captured = rustmp::Capture::new($captured);)*
         {
-            let tpm_mtx = ThreadPoolManager::get_instance_guard();
-            let tpm = tpm_mtx.lock().unwrap();
-            let iters = tpm.split_iterators($iterator, 1);
-            for iter in iters {
-                let $captured = $captured.clone();
-                tasks.push(as_static_job(move || {
+            let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
+            let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
+            let __rmp_iters = __rmp_tpm.split_iterators($iterator, $size);
+            for iter in __rmp_iters {
+                $(let $captured = $captured.clone();)*
+                __rmp_tasks.push(rustmp::as_static_job(move || {
                     for &$name in &iter
                         $blk
                 }));
             }
-            tpm.exec(tasks);
+            __rmp_tpm.exec(__rmp_tasks);
         }
-
-        //let itr = $iterator;
-        //let $captured = Capture::new($captured);
-        //let mut handles: Vec<thread::JoinHandle<()>> = vec![];
-        //for $name in itr {
-        //    let $captured = $captured.clone();
-        //    handles.push(thread::spawn(move || $blk));
-        //}
-
-        //for handle in handles {
-        //    handle.join().expect("Thread paniced!");
-        //}
-
-        let $captured = $captured.unwrap();
+        $(let $captured = $captured.unwrap();)*
     };
+}
+
+/// "parallel for" wrapper
+///
+/// If the number of arguments increases, convert this to a tail recursive parser instead.
+/// Current implementation save limited (max depth 32) stack space for macro expansion.
+#[macro_export]
+macro_rules! par_for {
+    (for $name:ident in $iterator:expr, blocksize $size:expr, capturing $($captured:ident)+, $blk:block) => {
+        rustmp::__internal_par_for!($name, $iterator, $size, $($captured)*, $blk);
+    };
+    (for $name:ident in $iterator:expr, blocksize $size:expr, capturing $($captured:ident)+ $blk:block) => {
+        rustmp::__internal_par_for!($name, $iterator, $size, $($captured)*, $blk);
+    };
+    (for $name:ident in $iterator:expr, capturing $($captured:ident)+, blocksize $size:expr, $blk:block) => {
+        rustmp::__internal_par_for!($name, $iterator, $size, $($captured)*, $blk);
+    };
+    (for $name:ident in $iterator:expr, blocksize $size:expr, $blk:block) => {
+        rustmp::__internal_par_for!($name, $iterator, $size,, $blk);
+    };
+    (for $name:ident in $iterator:expr, capturing $($captured:ident)+, $blk:block) => {
+        rustmp::__internal_par_for!($name, $iterator, 1, $($captured)*, $blk);
+    };
+    (for $name:ident in $iterator:expr, capturing $($captured:ident)+ $blk:block) => {
+        rustmp::__internal_par_for!($name, $iterator, 1, $($captured)*, $blk);
+    }
 }
