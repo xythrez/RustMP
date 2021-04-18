@@ -1,5 +1,6 @@
-pub mod sysinfo;
 pub mod threadpool;
+
+mod sysinfo;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
