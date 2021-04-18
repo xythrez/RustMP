@@ -1,6 +1,6 @@
 use rand::Rng;
 use rustmp::par_for;
-use rustmp::SystemObject;
+use rustmp::sysinfo::SystemObject;
 use std::time;
 
 #[derive(Debug)]

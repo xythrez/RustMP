@@ -1,8 +1,7 @@
-mod sysinfo;
+pub mod sysinfo;
+pub mod threadpool;
 
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-
-pub use sysinfo::SystemObject;
 
 pub struct Capture<T> {
     value: Arc<RwLock<T>>,
