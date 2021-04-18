@@ -41,20 +41,37 @@ impl<T> Capture<T> {
 macro_rules! par_for {
     (for $name:ident in $iterator:expr, capturing $captured:ident $blk:block) => {
         use rustmp::Capture;
+        use rustmp::threadpool::{Job, ThreadPoolManager, as_static_job};
         use std::sync::{Arc, RwLock};
         use std::thread;
 
-        let itr = $iterator;
+        let mut tasks = Vec::new();
         let $captured = Capture::new($captured);
-        let mut handles: Vec<thread::JoinHandle<()>> = vec![];
-        for $name in itr {
-            let $captured = $captured.clone();
-            handles.push(thread::spawn(move || $blk));
+        {
+            let tpm_mtx = ThreadPoolManager::get_instance_guard();
+            let tpm = tpm_mtx.lock().unwrap();
+            let iters = tpm.split_iterators($iterator, 1);
+            for iter in iters {
+                let $captured = $captured.clone();
+                tasks.push(as_static_job(move || {
+                    for &$name in &iter
+                        $blk
+                }));
+            }
+            tpm.exec(tasks);
         }
 
-        for handle in handles {
-            handle.join().expect("Thread paniced!");
-        }
+        //let itr = $iterator;
+        //let $captured = Capture::new($captured);
+        //let mut handles: Vec<thread::JoinHandle<()>> = vec![];
+        //for $name in itr {
+        //    let $captured = $captured.clone();
+        //    handles.push(thread::spawn(move || $blk));
+        //}
+
+        //for handle in handles {
+        //    handle.join().expect("Thread paniced!");
+        //}
 
         let $captured = $captured.unwrap();
     };

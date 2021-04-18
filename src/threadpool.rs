@@ -111,6 +111,34 @@ impl ThreadPoolManager {
         // Used to return main thread from exec
         self.task_barrier.wait();
     }
+
+    /// Splits an iterator into RMP_NUM_THREADS iterators, each with a step size of
+    /// block_size.
+    ///
+    /// Returned iterators are stored in a Vec<Vec<S>>, but anything should work as
+    /// long as the default Rust for loop accepts it.
+    pub fn split_iterators<T, S>(&self, iter: T, block_size: usize) -> Vec<Vec<S>>
+    where
+        T: Iterator<Item=S>
+    {
+        let mut split = Vec::new();
+        split.reserve_exact(self.num_threads);
+        for _ in 0..self.num_threads {
+            split.push(Vec::new());
+        }
+
+        let mut index: usize = 0;
+        let mut block: usize = 0;
+        for element in iter {
+            split[index].push(element);
+            block += 1;
+            if block % block_size == 0 {
+                block = 0;
+                index = (index + 1) % self.num_threads;
+            }
+        }
+        split
+    }
 }
 
 /// Wrapper routine for threads in the ThreadPoolManager
