@@ -47,19 +47,21 @@ impl SystemObject {
         // PUs per Package
         let puppa = coppa * pupco;
         // PUs per Machine
-        let available_hwthreads= papma * puppa;
+        let available_hwthreads = papma * puppa;
 
         // The cpu_bind_map can be instantiated using environment variables if desired.
         // Possible interesting improvement would be building a cpu_bind_map using a syntax like
         // OpenMP's OMP_PLACES. But that is outside of this project's scope due to difficulty of
         // writing a parser.
-        let cpu_bind_map= (0..available_hwthreads).map(|x| {
-            let package_id = x / puppa;
-            let package_offset = x % puppa;
-            let core_id = package_offset % coppa;
-            let core_offset = package_offset / coppa;
-            return puppa * package_id + core_id * pupco + core_offset;
-        }).collect::<Vec<usize>>();
+        let cpu_bind_map = (0..available_hwthreads)
+            .map(|x| {
+                let package_id = x / puppa;
+                let package_offset = x % puppa;
+                let core_id = package_offset % coppa;
+                let core_offset = package_offset / coppa;
+                return puppa * package_id + core_id * pupco + core_offset;
+            })
+            .collect::<Vec<usize>>();
 
         let max_num_threads = max(
             option_env!("RMP_NUM_THREADS")

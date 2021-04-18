@@ -119,7 +119,7 @@ impl ThreadPoolManager {
     /// long as the default Rust for loop accepts it.
     pub fn split_iterators<T, S>(&self, iter: T, block_size: usize) -> Vec<Vec<S>>
     where
-        T: Iterator<Item=S>
+        T: Iterator<Item = S>,
     {
         let mut split = Vec::new();
         split.reserve_exact(self.num_threads);
