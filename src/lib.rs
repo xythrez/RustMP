@@ -40,17 +40,53 @@ impl<T> Capture<T> {
 }
 
 #[macro_export]
+macro_rules! critical {
+    (read $($r:ident)+; readwrite $($w:ident)+; $($ops:tt)+) => {
+        {
+            $(let $r = $r.read();)*
+            $(let mut $w = $w.write();)*
+            $($ops)*
+        }
+    };
+    (readwrite $($w:ident)+; read $($r:ident)+; $($ops:tt)+) => {
+        {
+            $(let $r = $r.read();)*
+            $(let mut $w = $w.write();)*
+            $($ops)*
+        }
+    };
+    (readwrite $($w:ident)+; $($ops:tt)+) => {
+        {
+            $(let mut $w = $w.write();)*
+            $($ops)*
+        }
+    };
+    (read $($r:ident)+; $($ops:tt)+) => {
+        {
+            $(let $r = $r.read();)*
+            $($ops)*
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! __internal_par_for {
-    ($name:ident, $iterator:expr, $size:expr, $($captured:ident)*, $blk:block) => {
+    (var_name($name:ident),
+    iterator($iter:expr),
+    blocksize($size:expr),
+    captured($($captured:ident)*),
+    private($($private:ident)*),
+    $blk:block) => {
         let mut __rmp_tasks = Vec::new();
         $(let $captured = rustmp::Capture::new($captured);)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
-            let __rmp_iters = __rmp_tpm.split_iterators($iterator, $size);
+            let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
             for iter in __rmp_iters {
                 $(let $captured = $captured.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
+                    $(let mut $private = $private.clone();)*
                     for &$name in &iter
                         $blk
                 }));
@@ -58,6 +94,54 @@ macro_rules! __internal_par_for {
             __rmp_tpm.exec(__rmp_tasks);
         }
         $(let $captured = $captured.unwrap();)*
+    };
+    // Parse blocksize
+    (var_name($name:ident),
+    iterator($iter:expr),
+    blocksize($size:expr),
+    captured($($captured:ident)*),
+    private($($private:ident)*),
+    blocksize $new_size:expr,
+    $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name($name),
+            iterator($iter),
+            blocksize($new_size),
+            captured($($captured)*),
+            private($($private)*),
+            $($rem)*)
+    };
+    // Parse capturing
+    (var_name($name:ident),
+    iterator($iter:expr),
+    blocksize($size:expr),
+    captured($($captured:ident)*),
+    private($($private:ident)*),
+    capturing $($new_captured:ident)*,
+    $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name($name),
+            iterator($iter),
+            blocksize($size),
+            captured($($new_captured)*),
+            private($($private)*),
+            $($rem)*)
+    };
+    // Parse private
+    (var_name($name:ident),
+    iterator($iter:expr),
+    blocksize($size:expr),
+    captured($($captured:ident)*),
+    private($($private:ident)*),
+    private $($new_private:ident)*,
+    $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name($name),
+            iterator($iter),
+            blocksize($size),
+            captured($($captured)*),
+            private($($new_private)*),
+            $($rem)*)
     };
 }
 
@@ -67,22 +151,13 @@ macro_rules! __internal_par_for {
 /// Current implementation save limited (max depth 32) stack space for macro expansion.
 #[macro_export]
 macro_rules! par_for {
-    (for $name:ident in $iterator:expr, blocksize $size:expr, capturing $($captured:ident)+, $blk:block) => {
-        rustmp::__internal_par_for!($name, $iterator, $size, $($captured)*, $blk);
-    };
-    (for $name:ident in $iterator:expr, blocksize $size:expr, capturing $($captured:ident)+ $blk:block) => {
-        rustmp::__internal_par_for!($name, $iterator, $size, $($captured)*, $blk);
-    };
-    (for $name:ident in $iterator:expr, capturing $($captured:ident)+, blocksize $size:expr, $blk:block) => {
-        rustmp::__internal_par_for!($name, $iterator, $size, $($captured)*, $blk);
-    };
-    (for $name:ident in $iterator:expr, blocksize $size:expr, $blk:block) => {
-        rustmp::__internal_par_for!($name, $iterator, $size,, $blk);
-    };
-    (for $name:ident in $iterator:expr, capturing $($captured:ident)+, $blk:block) => {
-        rustmp::__internal_par_for!($name, $iterator, 1, $($captured)*, $blk);
-    };
-    (for $name:ident in $iterator:expr, capturing $($captured:ident)+ $blk:block) => {
-        rustmp::__internal_par_for!($name, $iterator, 1, $($captured)*, $blk);
+    (for $name:ident in $iter:expr, $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name($name),
+            iterator($iter),
+            blocksize(1),
+            captured(),
+            private(),
+            $($rem)*)
     }
 }
