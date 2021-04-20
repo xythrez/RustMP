@@ -1,6 +1,6 @@
-use rand::Rng;
+// use rand::Rng;
 use rustmp::{par_for, critical};
-use std::time;
+// use std::time;
 
 #[derive(Debug)]
 struct Student {
@@ -41,14 +41,26 @@ fn main() {
         println!("{:?}", num);
     }
 
-    //let mut local = 0;
-    //par_for! {
-    //for i in 1..32, blocksize 1, capturing numbers, private local, {
-    //local += 1;
-    //println!("{}", local);
-    //let mut lock = numbers.write();
-    //lock.push(Student::new(i));
-    //println!("Thread {} running!", i);
-    //} }
+    let mut x = 0;
+    // let mut y = 1;
+    par_for! {
+        for i in 0..10, reduction x#+, {
+            // let mut lock = x.write();
+            // *lock += 7;
+            // y *= 6;
+            x += 2;
+        }
+    }
+    println!("{:?}", x);
+
+    // let mut local = 0;
+    // par_for! {
+    // for i in 1..32, blocksize 1, capturing numbers, private local, {
+    // local += 1;
+    // println!("{}", local);
+    // let mut lock = numbers.write();
+    // lock.push(Student::new(i));
+    // println!("Thread {} running!", i);
+    // } }
 
 }
