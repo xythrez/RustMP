@@ -121,8 +121,7 @@ impl ThreadPoolManager {
     where
         T: Iterator<Item = S>,
     {
-        let mut split = Vec::new();
-        split.reserve_exact(self.num_threads);
+        let mut split = Vec::with_capacity(self.num_threads);
         for _ in 0..self.num_threads {
             split.push(Vec::new());
         }
