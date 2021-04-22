@@ -111,7 +111,10 @@ macro_rules! __internal_par_for {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
             let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
-            let __rmp_red_vals = rustmp::Capture::new(Vec::with_capacity(__rmp_iters.len()));
+            let mut __rmp_red_vals = Vec::new();
+            // let mut __rmp_count = 0;
+            $(__rmp_red_vals.push(Vec::new()); $red_name = $red_name;)*
+            let __rmp_red_vals = rustmp::Capture::new(__rmp_red_vals);
             for iter in __rmp_iters {
                 $(let $captured = $captured.clone();)*
                 let __rmp_red_vals = __rmp_red_vals.clone();
@@ -121,14 +124,14 @@ macro_rules! __internal_par_for {
                     for &$name in &iter
                         $blk
                     let mut __rmp_temp = __rmp_red_vals.write();
-                    $(__rmp_temp.push($red_name);)*
+                    let mut __rmp_counter = 0;
+                    $(__rmp_temp[__rmp_counter].push($red_name); __rmp_counter += 1;)*
                 }));
             }
             __rmp_tpm.exec(__rmp_tasks);
             let mut __rmp_temp = __rmp_red_vals.read();
-            for i in 0..__rmp_temp.len() {
-                $($red_name = $red_name $red_op __rmp_temp[i];)*
-            }
+            let mut __rmp_counter = 0;
+            $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, |x, &y| {x $red_op y}); __rmp_counter += 1;)*;
         }
         $(let $captured = $captured.unwrap();)*
     };
@@ -193,7 +196,7 @@ macro_rules! __internal_par_for {
     captured($($captured:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)*),
-    reduction $($new_name:ident#$new_op:tt)*,
+    reduction $($new_name:ident#$new_op:tt);*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),

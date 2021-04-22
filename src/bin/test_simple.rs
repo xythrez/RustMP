@@ -18,7 +18,6 @@ impl Student {
         }
     }
 }
-
 fn main() {
     let numbers: Vec<Student> = vec![];
 
@@ -41,18 +40,21 @@ fn main() {
         println!("{:?}", num);
     }
 
+    let a:Vec<Vec<i32>> = vec![vec![1,2,3],vec![4,5,6],vec![7,8,9]];
+    let n = a.len();
+    let mut c = vec![vec![0;n];n];
     let mut x = 0;
-    // let mut y = 1;
     par_for! {
-        for i in 0..10, reduction x#+, {
-            // let mut lock = x.write();
-            // *lock += 7;
-            // y *= 6;
-            x += 2;
+        // I feel like we shouldn't need to capture a here
+        for k in 0..n, capturing a, reduction x#+, {
+            critical! {
+                read a;
+                x += a[1][k]*a[k][0];
+            }
         }
     }
-    println!("{:?}", x);
-
+    c[1][0] = x;
+    println!("{:?}", c[1][0]);
     // let mut local = 0;
     // par_for! {
     // for i in 1..32, blocksize 1, capturing numbers, private local, {
