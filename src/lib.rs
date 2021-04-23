@@ -87,6 +87,7 @@ macro_rules! __internal_par_for {
             let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
             for iter in __rmp_iters {
                 $(let $captured = $captured.clone();)*
+                $(let $private = $private.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
                     for &$name in &iter
@@ -118,6 +119,8 @@ macro_rules! __internal_par_for {
             for iter in __rmp_iters {
                 $(let $captured = $captured.clone();)*
                 let __rmp_red_vals = __rmp_red_vals.clone();
+                $(let $private = $private.clone();)*
+                $(let $red_name = $red_name.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
                     $(let mut $red_name = $red_name.clone();)*
