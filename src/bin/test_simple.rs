@@ -40,21 +40,22 @@ fn main() {
         println!("{:?}", num);
     }
 
-    let a:Vec<Vec<i32>> = vec![vec![1,2,3],vec![4,5,6],vec![7,8,9]];
+    let a = vec![vec![1,2,3],vec![4,5,6],vec![7,8,9]];
+    let b = vec![vec![3,2,1],vec![6,5,4],vec![9,8,7]];
     let n = a.len();
     let mut c = vec![vec![0;n];n];
-    let mut x = 0;
-    par_for! {
-        // I feel like we shouldn't need to capture a here
-        for k in 0..n, capturing a, reduction x#+, {
-            critical! {
-                read a;
-                x += a[1][k]*a[k][0];
+    for i in 0..n {
+        for j in 0..n {
+            let mut x = 0;
+            par_for! {
+                for k in 0..n, using a b, reducing x#+, {
+                    x += a[i][k]*b[k][j];
+                }
             }
+            c[i][j] = x;
         }
     }
-    c[1][0] = x;
-    println!("{:?}", c[1][0]);
+    println!("{:?}", c);
     // let mut local = 0;
     // par_for! {
     // for i in 1..32, blocksize 1, capturing numbers, private local, {
