@@ -1,12 +1,15 @@
 [package]
 name = "rustmp"
 version = "0.1.0"
-authors = ["Yiyao Yu <yuydevel@protonmail.com>"]
+authors = ["Alex Bowman <abowman6@u.rochester.edu>",
+           "Raffi Sanna <rsanna@u.rochester.edu>",
+           "Paul Ouellette <pouellet@u.rochester.edu>",
+           "Jack Yu <yyu57@u.rochester.edu>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rand = "*"
-hwloc2 = "*"
-lazy_static = "*"
+rand = "0.8.3"
+hwloc2 = "2.2.0"
+lazy_static = "1.4.0"
