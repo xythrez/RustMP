@@ -76,20 +76,21 @@ macro_rules! __internal_par_for {
     iterator($iter:expr),
     blocksize($size:expr),
     captured($($captured:ident)*),
+    using($($used_name:ident)*),
     private($($private:ident)*),
     reducing(),
-    using($($used_name:ident)*),
     $blk:block) => {
         let mut __rmp_tasks = Vec::new();
         $(let $captured = rustmp::Capture::new($captured);)*
+        $(let $used_name = std::sync::Arc::new($used_name.clone());)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
             let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
             for iter in __rmp_iters {
                 $(let $captured = $captured.clone();)*
-                $(let $private = $private.clone();)*
                 $(let $used_name = $used_name.clone();)*
+                $(let $private = $private.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
                     for &$name in &iter
@@ -105,40 +106,41 @@ macro_rules! __internal_par_for {
     iterator($iter:expr),
     blocksize($size:expr),
     captured($($captured:ident)*),
+    using($($used_name:ident)*),
     private($($private:ident)*),
     reducing($($red_name:ident, $red_op:tt)+),
-    using($($used_name:ident)*),
     $blk:block) => {
         let mut __rmp_tasks = Vec::new();
         $(let $captured = rustmp::Capture::new($captured);)*
+        $(let $used_name = std::sync::Arc::new($used_name.clone());)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
             let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
             let mut __rmp_red_vals = Vec::new();
-            // let mut __rmp_count = 0;
-            $(__rmp_red_vals.push(Vec::new()); $red_name = $red_name;)*
+            $(__rmp_red_vals.push(Vec::new()); stringify!($red_name);)*
             let __rmp_red_vals = rustmp::Capture::new(__rmp_red_vals);
             for iter in __rmp_iters {
                 $(let $captured = $captured.clone();)*
                 $(let $used_name = $used_name.clone();)*
-                let __rmp_red_vals = __rmp_red_vals.clone();
                 $(let $private = $private.clone();)*
+                let __rmp_red_vals = __rmp_red_vals.clone();
                 $(let $red_name = $red_name.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
                     $(let mut $red_name = $red_name.clone();)*
                     for &$name in &iter
                         $blk
-                    let mut __rmp_temp = __rmp_red_vals.write();
                     let mut __rmp_counter = 0;
+                    let mut __rmp_temp = __rmp_red_vals.write();
                     $(__rmp_temp[__rmp_counter].push($red_name); __rmp_counter += 1;)*
                 }));
             }
             __rmp_tpm.exec(__rmp_tasks);
             let mut __rmp_temp = __rmp_red_vals.read();
             let mut __rmp_counter = 0;
-            $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, |x, &y| {x $red_op y}); __rmp_counter += 1;)*;
+            $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, |x, &y| {x $red_op y});
+            __rmp_counter += 1;)*
         }
         $(let $captured = $captured.unwrap();)*
     };
@@ -147,9 +149,9 @@ macro_rules! __internal_par_for {
     iterator($iter:expr),
     blocksize($size:expr),
     captured($($captured:ident)*),
+    using($($used_name:ident)*),
     private($($private:ident)*),
     reducing($($red_name:ident, $red_op:tt)*),
-    using($($used_name:ident)*),
     blocksize $new_size:expr,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
@@ -157,9 +159,9 @@ macro_rules! __internal_par_for {
             iterator($iter),
             blocksize($new_size),
             captured($($captured)*),
+            using($($used_name)*),
             private($($private)*),
             reducing($($red_name, $red_op)*),
-            using($($used_name)*),
             $($rem)*)
     };
     // Parse capturing
@@ -167,9 +169,9 @@ macro_rules! __internal_par_for {
     iterator($iter:expr),
     blocksize($size:expr),
     captured($($captured:ident)*),
+    using($($used_name:ident)*),
     private($($private:ident)*),
     reducing($($red_name:ident, $red_op:tt)*),
-    using($($used_name:ident)*),
     capturing $($new_captured:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
@@ -177,49 +179,9 @@ macro_rules! __internal_par_for {
             iterator($iter),
             blocksize($size),
             captured($($new_captured)*),
+            using($($used_name)*),
             private($($private)*),
             reducing($($red_name, $red_op)*),
-            using($($used_name)*),
-            $($rem)*)
-    };
-    // Parse private
-    (var_name($name:ident),
-    iterator($iter:expr),
-    blocksize($size:expr),
-    captured($($captured:ident)*),
-    private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
-    using($($used_name:ident)*),
-    private $($new_private:ident)*,
-    $($rem:tt)+) => {
-        rustmp::__internal_par_for!(
-            var_name($name),
-            iterator($iter),
-            blocksize($size),
-            captured($($captured)*),
-            private($($new_private)*),
-            reducing($($red_name, $red_op)*),
-            using($($used_name)*),
-            $($rem)*)
-    };
-    // Parse reducing
-    (var_name($name:ident),
-    iterator($iter:expr),
-    blocksize($size:expr),
-    captured($($captured:ident)*),
-    private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
-    using($($used_name:ident)*),
-    reducing $($new_name:ident#$new_op:tt);*,
-    $($rem:tt)+) => {
-        rustmp::__internal_par_for!(
-            var_name($name),
-            iterator($iter),
-            blocksize($size),
-            captured($($captured)*),
-            private($($private)*),
-            reducing($($new_name, $new_op)*),
-            using($($used_name)*),
             $($rem)*)
     };
     // Parse using
@@ -227,9 +189,9 @@ macro_rules! __internal_par_for {
     iterator($iter:expr),
     blocksize($size:expr),
     captured($($captured:ident)*),
+    using($($used_name:ident)*),
     private($($private:ident)*),
     reducing($($red_name:ident, $red_op:tt)*),
-    using($($used_name:ident)*),
     using $($new_name:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
@@ -237,9 +199,49 @@ macro_rules! __internal_par_for {
             iterator($iter),
             blocksize($size),
             captured($($captured)*),
+            using($($new_name)*),
             private($($private)*),
             reducing($($red_name, $red_op)*),
-            using($($new_name)*),
+            $($rem)*)
+    };
+    // Parse private
+    (var_name($name:ident),
+    iterator($iter:expr),
+    blocksize($size:expr),
+    captured($($captured:ident)*),
+    using($($used_name:ident)*),
+    private($($private:ident)*),
+    reducing($($red_name:ident, $red_op:tt)*),
+    private $($new_private:ident)*,
+    $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name($name),
+            iterator($iter),
+            blocksize($size),
+            captured($($captured)*),
+            using($($used_name)*),
+            private($($new_private)*),
+            reducing($($red_name, $red_op)*),
+            $($rem)*)
+    };
+    // Parse reducing
+    (var_name($name:ident),
+    iterator($iter:expr),
+    blocksize($size:expr),
+    captured($($captured:ident)*),
+    using($($used_name:ident)*),
+    private($($private:ident)*),
+    reducing($($red_name:ident, $red_op:tt)*),
+    reducing $($new_name:ident#$new_op:tt);*,
+    $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name($name),
+            iterator($iter),
+            blocksize($size),
+            captured($($captured)*),
+            using($($used_name)*),
+            private($($private)*),
+            reducing($($new_name, $new_op)*),
             $($rem)*)
     };
 }
@@ -256,9 +258,9 @@ macro_rules! par_for {
             iterator($iter),
             blocksize(1),
             captured(),
+            using(),
             private(),
             reducing(),
-            using(),
             $($rem)*)
     }
 }
