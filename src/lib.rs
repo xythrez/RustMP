@@ -71,25 +71,25 @@ macro_rules! critical {
 
 #[macro_export]
 macro_rules! __internal_par_for {
-    // without reducing
+    // without reduction
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing(),
+    reduction(),
     $blk:block) => {
         let mut __rmp_tasks = Vec::new();
-        $(let $captured = rustmp::Capture::new($captured);)*
-        $(let $used_name = std::sync::Arc::new($used_name.clone());)*
+        $(let $locked = rustmp::Capture::new($locked);)*
+        $(let $read = std::sync::Arc::new($read.clone());)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
             let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
             for iter in __rmp_iters {
-                $(let $captured = $captured.clone();)*
-                $(let $used_name = $used_name.clone();)*
+                $(let $locked = $locked.clone();)*
+                $(let $read = $read.clone();)*
                 $(let $private = $private.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
@@ -99,20 +99,20 @@ macro_rules! __internal_par_for {
             }
             __rmp_tpm.exec(__rmp_tasks);
         }
-        $(let $captured = $captured.unwrap();)*
+        $(let $locked = $locked.unwrap();)*
     };
-    // with reducing
+    // with reduction
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)+),
+    reduction($($red_name:ident, $red_op:tt)+),
     $blk:block) => {
         let mut __rmp_tasks = Vec::new();
-        $(let $captured = rustmp::Capture::new($captured);)*
-        $(let $used_name = std::sync::Arc::new($used_name.clone());)*
+        $(let $locked = rustmp::Capture::new($locked);)*
+        $(let $read = std::sync::Arc::new($read.clone());)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
@@ -121,8 +121,8 @@ macro_rules! __internal_par_for {
             $(__rmp_red_vals.push(Vec::new()); stringify!($red_name);)*
             let __rmp_red_vals = rustmp::Capture::new(__rmp_red_vals);
             for iter in __rmp_iters {
-                $(let $captured = $captured.clone();)*
-                $(let $used_name = $used_name.clone();)*
+                $(let $locked = $locked.clone();)*
+                $(let $read = $read.clone();)*
                 $(let $private = $private.clone();)*
                 let __rmp_red_vals = __rmp_red_vals.clone();
                 $(let $red_name = $red_name.clone();)*
@@ -142,106 +142,106 @@ macro_rules! __internal_par_for {
             $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, |x, &y| {x $red_op y});
             __rmp_counter += 1;)*
         }
-        $(let $captured = $captured.unwrap();)*
+        $(let $locked = $locked.unwrap();)*
     };
     // Parse blocksize
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
+    reduction($($red_name:ident, $red_op:tt)*),
     blocksize $new_size:expr,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($new_size),
-            captured($($captured)*),
-            using($($used_name)*),
+            locked($($locked)*),
+            read($($read)*),
             private($($private)*),
-            reducing($($red_name, $red_op)*),
+            reduction($($red_name, $red_op)*),
             $($rem)*)
     };
-    // Parse capturing
+    // Parse locked
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
-    capturing $($new_captured:ident)*,
+    reduction($($red_name:ident, $red_op:tt)*),
+    locked $($new_locked:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($size),
-            captured($($new_captured)*),
-            using($($used_name)*),
+            locked($($new_locked)*),
+            read($($read)*),
             private($($private)*),
-            reducing($($red_name, $red_op)*),
+            reduction($($red_name, $red_op)*),
             $($rem)*)
     };
-    // Parse using
+    // Parse read
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
-    using $($new_name:ident)*,
+    reduction($($red_name:ident, $red_op:tt)*),
+    read $($new_name:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($size),
-            captured($($captured)*),
-            using($($new_name)*),
+            locked($($locked)*),
+            read($($new_name)*),
             private($($private)*),
-            reducing($($red_name, $red_op)*),
+            reduction($($red_name, $red_op)*),
             $($rem)*)
     };
     // Parse private
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
+    reduction($($red_name:ident, $red_op:tt)*),
     private $($new_private:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($size),
-            captured($($captured)*),
-            using($($used_name)*),
+            locked($($locked)*),
+            read($($read)*),
             private($($new_private)*),
-            reducing($($red_name, $red_op)*),
+            reduction($($red_name, $red_op)*),
             $($rem)*)
     };
-    // Parse reducing
+    // Parse reduction
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    captured($($captured:ident)*),
-    using($($used_name:ident)*),
+    locked($($locked:ident)*),
+    read($($read:ident)*),
     private($($private:ident)*),
-    reducing($($red_name:ident, $red_op:tt)*),
-    reducing $($new_name:ident#$new_op:tt);*,
+    reduction($($red_name:ident, $red_op:tt)*),
+    reduction $($new_name:ident#$new_op:tt);*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($size),
-            captured($($captured)*),
-            using($($used_name)*),
+            locked($($locked)*),
+            read($($read)*),
             private($($private)*),
-            reducing($($new_name, $new_op)*),
+            reduction($($new_name, $new_op)*),
             $($rem)*)
     };
 }
@@ -257,10 +257,10 @@ macro_rules! par_for {
             var_name($name),
             iterator($iter),
             blocksize(1),
-            captured(),
-            using(),
+            locked(),
+            read(),
             private(),
-            reducing(),
+            reduction(),
             $($rem)*)
     }
 }
