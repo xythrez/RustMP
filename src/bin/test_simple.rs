@@ -18,6 +18,15 @@ impl Student {
         }
     }
 }
+
+fn min(x: i32, y: &i32) -> i32 {
+    if x < *y {
+        x
+    } else {
+        *y
+    }
+}
+
 fn main() {
     let numbers: Vec<Student> = vec![];
 
@@ -49,7 +58,7 @@ fn main() {
             let mut x = 0;
             par_for! {
                 for k in 0..n, read a b, reduction x#+, {
-                    x += a[i][k]*b[k][j];
+                    x += (a[i][k]*b[k][j]);
                 }
             }
             c[i][j] = x;
