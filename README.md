@@ -29,8 +29,8 @@ following command:
 $ cargo run --release --bin <testname>
 ```
 
-Additional comparison programs are located in `ext/`, where sequential, OpenMP
-and Rayon comparison benchmarks can be found.
+Additional comparison programs are located in `omp/`, where C comparison
+benchmarks can be found.
 
 ## Known issues
 
