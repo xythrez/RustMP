@@ -70,6 +70,14 @@ macro_rules! critical {
 }
 
 #[macro_export]
+macro_rules! __reduction_operation {
+    ($f:ident) => {$f};
+    ($op:tt) => {
+        |x, &y| {x $op y}
+    }
+}
+
+#[macro_export]
 macro_rules! __internal_par_for {
     // without reduction
     (var_name($name:ident),
@@ -90,7 +98,7 @@ macro_rules! __internal_par_for {
             for iter in __rmp_iters {
                 $(let $locked = $locked.clone();)*
                 $(let $read = $read.clone();)*
-                $(let $private = $private.clone();)*
+                // $(let $private = $private.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
                     for &$name in &iter
@@ -123,7 +131,7 @@ macro_rules! __internal_par_for {
             for iter in __rmp_iters {
                 $(let $locked = $locked.clone();)*
                 $(let $read = $read.clone();)*
-                $(let $private = $private.clone();)*
+                // $(let $private = $private.clone();)*
                 let __rmp_red_vals = __rmp_red_vals.clone();
                 $(let $red_name = $red_name.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
@@ -139,7 +147,7 @@ macro_rules! __internal_par_for {
             __rmp_tpm.exec(__rmp_tasks);
             let mut __rmp_temp = __rmp_red_vals.read();
             let mut __rmp_counter = 0;
-            $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, |x, &y| {x $red_op y});
+            $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, rustmp::__reduction_operation!($red_op));
             __rmp_counter += 1;)*
         }
         $(let $locked = $locked.unwrap();)*
