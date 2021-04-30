@@ -31,7 +31,7 @@ fn main() {
     let numbers: Vec<Student> = vec![];
 
     par_for! {
-        for i in 1..32, blocksize 4, locked numbers, {
+        for i in 1..32, blocksize 4, shared_mut numbers, {
             //std::thread::sleep(
             //    time::Duration::from_secs(
             //    rand::thread_rng().gen_range(1..10)));
@@ -57,7 +57,7 @@ fn main() {
         for j in 0..n {
             let mut x = 0;
             par_for! {
-                for k in 0..n, read a b, reduction x#+, {
+                for k in 0..n, shared a b, reduction x#+, {
                     x += (a[i][k]*b[k][j]);
                 }
             }
@@ -67,7 +67,7 @@ fn main() {
     println!("{:?}", c);
     // let mut local = 0;
     // par_for! {
-    // for i in 1..32, blocksize 1, locked numbers, private local, {
+    // for i in 1..32, blocksize 1, shared_mut numbers, private local, {
     // local += 1;
     // println!("{}", local);
     // let mut lock = numbers.write();

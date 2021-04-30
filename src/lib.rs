@@ -83,21 +83,21 @@ macro_rules! __internal_par_for {
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction(),
     $blk:block) => {
         let mut __rmp_tasks = Vec::new();
-        $(let $locked = rustmp::Capture::new($locked);)*
-        $(let $read = std::sync::Arc::new($read.clone());)*
+        $(let $shared_mut = rustmp::Capture::new($shared_mut);)*
+        $(let $shared = std::sync::Arc::new($shared.clone());)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
             let __rmp_iters = __rmp_tpm.split_iterators($iter, $size);
             for iter in __rmp_iters {
-                $(let $locked = $locked.clone();)*
-                $(let $read = $read.clone();)*
+                $(let $shared_mut = $shared_mut.clone();)*
+                $(let $shared = $shared.clone();)*
                 // $(let $private = $private.clone();)*
                 __rmp_tasks.push(rustmp::as_static_job(move || {
                     $(let mut $private = $private.clone();)*
@@ -107,20 +107,20 @@ macro_rules! __internal_par_for {
             }
             __rmp_tpm.exec(__rmp_tasks);
         }
-        $(let $locked = $locked.unwrap();)*
+        $(let $shared_mut = $shared_mut.unwrap();)*
     };
     // with reduction
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)+),
     $blk:block) => {
         let mut __rmp_tasks = Vec::new();
-        $(let $locked = rustmp::Capture::new($locked);)*
-        $(let $read = std::sync::Arc::new($read.clone());)*
+        $(let $shared_mut = rustmp::Capture::new($shared_mut);)*
+        $(let $shared = std::sync::Arc::new($shared.clone());)*
         {
             let __rmp_tpm_mtx = rustmp::ThreadPoolManager::get_instance_guard();
             let __rmp_tpm = __rmp_tpm_mtx.lock().unwrap();
@@ -129,8 +129,8 @@ macro_rules! __internal_par_for {
             $(__rmp_red_vals.push(Vec::new()); stringify!($red_name);)*
             let __rmp_red_vals = rustmp::Capture::new(__rmp_red_vals);
             for iter in __rmp_iters {
-                $(let $locked = $locked.clone();)*
-                $(let $read = $read.clone();)*
+                $(let $shared_mut = $shared_mut.clone();)*
+                $(let $shared = $shared.clone();)*
                 // $(let $private = $private.clone();)*
                 let __rmp_red_vals = __rmp_red_vals.clone();
                 $(let $red_name = $red_name.clone();)*
@@ -150,14 +150,14 @@ macro_rules! __internal_par_for {
             $($red_name = __rmp_temp[__rmp_counter].iter().fold($red_name, rustmp::__reduction_operation!($red_op));
             __rmp_counter += 1;)*
         }
-        $(let $locked = $locked.unwrap();)*
+        $(let $shared_mut = $shared_mut.unwrap();)*
     };
     // Parse blocksize
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)*),
     blocksize $new_size:expr,
@@ -166,48 +166,48 @@ macro_rules! __internal_par_for {
             var_name($name),
             iterator($iter),
             blocksize($new_size),
-            locked($($locked)*),
-            read($($read)*),
+            shared_mut($($shared_mut)*),
+            shared($($shared)*),
             private($($private)*),
             reduction($($red_name, $red_op)*),
             $($rem)*)
     };
-    // Parse locked
+    // Parse shared_mut
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)*),
-    locked $($new_locked:ident)*,
+    shared_mut $($new_shared_mut:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($size),
-            locked($($new_locked)*),
-            read($($read)*),
+            shared_mut($($new_shared_mut)*),
+            shared($($shared)*),
             private($($private)*),
             reduction($($red_name, $red_op)*),
             $($rem)*)
     };
-    // Parse read
+    // Parse shared
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)*),
-    read $($new_name:ident)*,
+    shared $($new_name:ident)*,
     $($rem:tt)+) => {
         rustmp::__internal_par_for!(
             var_name($name),
             iterator($iter),
             blocksize($size),
-            locked($($locked)*),
-            read($($new_name)*),
+            shared_mut($($shared_mut)*),
+            shared($($new_name)*),
             private($($private)*),
             reduction($($red_name, $red_op)*),
             $($rem)*)
@@ -216,8 +216,8 @@ macro_rules! __internal_par_for {
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)*),
     private $($new_private:ident)*,
@@ -226,8 +226,8 @@ macro_rules! __internal_par_for {
             var_name($name),
             iterator($iter),
             blocksize($size),
-            locked($($locked)*),
-            read($($read)*),
+            shared_mut($($shared_mut)*),
+            shared($($shared)*),
             private($($new_private)*),
             reduction($($red_name, $red_op)*),
             $($rem)*)
@@ -236,8 +236,8 @@ macro_rules! __internal_par_for {
     (var_name($name:ident),
     iterator($iter:expr),
     blocksize($size:expr),
-    locked($($locked:ident)*),
-    read($($read:ident)*),
+    shared_mut($($shared_mut:ident)*),
+    shared($($shared:ident)*),
     private($($private:ident)*),
     reduction($($red_name:ident, $red_op:tt)*),
     reduction $($new_name:ident#$new_op:tt);*,
@@ -246,8 +246,8 @@ macro_rules! __internal_par_for {
             var_name($name),
             iterator($iter),
             blocksize($size),
-            locked($($locked)*),
-            read($($read)*),
+            shared_mut($($shared_mut)*),
+            shared($($shared)*),
             private($($private)*),
             reduction($($new_name, $new_op)*),
             $($rem)*)
@@ -265,8 +265,8 @@ macro_rules! par_for {
             var_name($name),
             iterator($iter),
             blocksize(1),
-            locked(),
-            read(),
+            shared_mut(),
+            shared(),
             private(),
             reduction(),
             $($rem)*)

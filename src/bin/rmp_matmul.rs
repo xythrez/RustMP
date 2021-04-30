@@ -40,7 +40,7 @@ fn main() {
     let result = gen_empty(nsize);
     let timer = Instant::now();
     par_for! {
-        for i in 0..nsize, locked result, read matrix, {
+        for i in 0..nsize, shared_mut result, shared matrix, {
             for j in 0..nsize {
                 let mut sum = 0.0;
                 for k in 0..nsize {
