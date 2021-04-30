@@ -15,6 +15,8 @@ library written in Rust. For more details, please see the project report.
 
 RustMP requires the following dependencies to run:
 - `rand-v0.8.3`: Random number generation used for benchmarking examples
+- `rayon-v1.5.0`: Rayon parallel iterator library used in RustMP/Rayon..
+comparision tests
 - `hwloc2-v2.2.0`: C HWLoc wrapper used for NUMA aware process pinning
 - `lazy_static-v1.4.0`: Lazy static macro used for delayed singleton init
 
