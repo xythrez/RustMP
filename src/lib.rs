@@ -73,7 +73,7 @@ macro_rules! critical {
 macro_rules! __reduction_operation {
     ($f:ident) => {$f};
     ($op:tt) => {
-        |x, &y| {x $op y}
+        |x, y| {x $op y}
     }
 }
 

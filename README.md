@@ -29,8 +29,14 @@ following command:
 $ cargo run --release --bin <testname>
 ```
 
-Additional comparison programs are located in `omp/`, where C comparison
-benchmarks can be found.
+C comparison benchmarks can be found in `omp/`.
+
+Additional benchmarks are located in `benches`. These require Rust nightly and
+can be run with the following command:
+
+```
+$ cargo +nightly bench
+```
 
 ## Known issues
 
