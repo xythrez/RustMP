@@ -44,8 +44,8 @@ free_all (double **matrix, double **result, size_t nsize)
 {
     size_t i;
     for (i = 0; i < nsize; i++) {
-        free (matrix[nsize]);
-        free (result[nsize]);
+        free (matrix[i]);
+        free (result[i]);
     }
     free (matrix);
     free (result);
