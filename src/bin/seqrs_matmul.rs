@@ -1,6 +1,6 @@
-use std::env;
-use std::cmp::max;
 use rand::random;
+use std::cmp::max;
+use std::env;
 use std::time::Instant;
 
 fn gen_matrix(nsize: usize) -> Vec<Vec<f64>> {
@@ -33,7 +33,10 @@ fn main() {
         eprintln!("Usage: {} <msize>", args[0]);
         return;
     }
-    let nsize = max(args[1].parse::<usize>().expect("Usage: matrix_mul <msize>"), 1);
+    let nsize = max(
+        args[1].parse::<usize>().expect("Usage: matrix_mul <msize>"),
+        1,
+    );
     let matrix = gen_matrix(nsize);
     let mut result = gen_empty(nsize);
     let timer = Instant::now();

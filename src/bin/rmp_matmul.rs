@@ -1,9 +1,9 @@
-use std::env;
-use std::cmp::max;
 use rand::random;
+use std::cmp::max;
+use std::env;
 use std::time::Instant;
 
-use rustmp::{par_for, critical};
+use rustmp::{critical, par_for};
 
 fn gen_matrix(nsize: usize) -> Vec<Vec<f64>> {
     let mut ret = Vec::with_capacity(nsize);
@@ -35,7 +35,10 @@ fn main() {
         eprintln!("Usage: {} <msize>", args[0]);
         return;
     }
-    let nsize = max(args[1].parse::<usize>().expect("Usage: matrix_mul <msize>"), 1);
+    let nsize = max(
+        args[1].parse::<usize>().expect("Usage: matrix_mul <msize>"),
+        1,
+    );
     let matrix = gen_matrix(nsize);
     let result = gen_empty(nsize);
     let timer = Instant::now();

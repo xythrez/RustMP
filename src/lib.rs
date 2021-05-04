@@ -2,7 +2,7 @@ pub mod threadpool;
 
 mod sysinfo;
 
-use std::ops::{DerefMut, Deref};
+use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub use threadpool::{as_static_job, Job, ThreadPoolManager};
@@ -56,7 +56,7 @@ impl<T> Copy for UnsafePtr<T> {}
 
 impl<T> Clone for UnsafePtr<T> {
     fn clone(&self) -> Self {
-UnsafePtr { value: self.value }
+        UnsafePtr { value: self.value }
     }
 }
 
@@ -70,13 +70,12 @@ impl<T> Deref for UnsafePtr<T> {
 
 impl<T> DerefMut for UnsafePtr<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-unsafe { self.value.as_mut().unwrap() }
+        unsafe { self.value.as_mut().unwrap() }
     }
 }
 
 unsafe impl<T> Send for UnsafePtr<T> {}
 unsafe impl<T> Sync for UnsafePtr<T> {}
-
 
 #[macro_export]
 macro_rules! critical {
