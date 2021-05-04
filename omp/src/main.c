@@ -19,7 +19,7 @@ print_time_diff (struct timespec *start, struct timespec *end)
       nsec += 1000000000;
     }
 
-  printf ("Elapsed time: %ld.%09ld sec\n", sec, nsec);
+  printf ("Elapsed time: %ld.%09lds\n", sec, nsec);
 }
 
 void
