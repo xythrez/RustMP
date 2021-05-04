@@ -42,8 +42,6 @@ $(BLDDIR)/$(BIN_OMP): $(BLDDIR) $(SRCS)
 $(BLDDIR)/$(BIN_OMP_SAFE): $(BLDDIR) $(SRCS)
 	$(CC) $(CFLAGS_OMP_SAFE) $(SRCS) -o $@
 
-build: all
-
 $(BLDDIR):
 	@mkdir -p $(BLDDIR)
 
