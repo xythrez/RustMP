@@ -51,8 +51,17 @@ free_all (double **matrix, double **result, size_t nsize)
     free (result);
 }
 
+void
+warmup() {
+    size_t i;
+#ifdef PAR
+    #pragma omp parallel for
+#endif
+    for (i = 0; i < 1; i++) {}
+}
 
-int main (int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
     struct timespec start, end;
     size_t i, j, k, nsize;
@@ -70,6 +79,7 @@ int main (int argc, char *argv[])
     }
     nsize = raw_size;
     generate_matrices (&matrix, &result, nsize);
+    warmup();
     clock_gettime (CLOCK_MONOTONIC, &start);
 #ifdef PAR
     #pragma omp parallel for default(shared) private(j, k, sum)

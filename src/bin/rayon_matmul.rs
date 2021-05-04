@@ -16,6 +16,10 @@ fn gen_matrix(nsize: usize) -> Vec<Vec<f64>> {
     ret
 }
 
+fn warmup() {
+    let _discard = (0..1).into_par_iter().map(|i| {i}).collect::<Vec<i32>>();
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
@@ -27,6 +31,7 @@ fn main() {
         1,
     );
     let matrix = gen_matrix(nsize);
+    warmup();
     let timer = Instant::now();
     let _result = (0..nsize)
         .into_par_iter()

@@ -41,7 +41,8 @@ C comparison benchmarks can be found in `omp/`. These can be compiled using
 square matrix dimensions (i.e. `./matmul <nsize>`).
 
 Additional benchmarks are located in `benches`. These require Rust nightly and
-can be run with the following command:
+can be run with the following command, note that RustMP thread pool lazy startup
+cost is factored into these tests:
 
 ```
 $ cargo +nightly bench

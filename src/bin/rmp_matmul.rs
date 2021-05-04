@@ -29,6 +29,13 @@ fn gen_empty(nsize: usize) -> Vec<Vec<f64>> {
     ret
 }
 
+fn warmup() {
+    par_for! {
+        for _ in 0..1, {
+        }
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
@@ -41,6 +48,7 @@ fn main() {
     );
     let matrix = gen_matrix(nsize);
     let result = gen_empty(nsize);
+    warmup();
     let timer = Instant::now();
     par_for! {
         for i in 0..nsize, shared_mut result, shared matrix, {

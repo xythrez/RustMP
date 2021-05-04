@@ -357,5 +357,18 @@ macro_rules! par_for {
             private(),
             reduction(),
             $($rem)*)
+    };
+
+    (for _ in $iter:expr, $($rem:tt)+) => {
+        rustmp::__internal_par_for!(
+            var_name(__rmp_internal_unused),
+            iterator($iter),
+            blocksize(1),
+            shared_mut(),
+            shared(),
+            shared_unsafe(),
+            private(),
+            reduction(),
+            $($rem)*)
     }
 }
