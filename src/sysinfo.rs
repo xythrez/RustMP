@@ -1,6 +1,7 @@
 use hwloc2::{CpuBindError, CpuBindFlags, ObjectType, Topology, TopologyObject};
 use lazy_static::lazy_static;
 use std::cmp::max;
+use std::env::var;
 use std::sync::Arc;
 
 lazy_static! {
@@ -64,8 +65,8 @@ impl SystemObject {
             .collect::<Vec<usize>>();
 
         let max_num_threads = max(
-            option_env!("RMP_NUM_THREADS")
-                .unwrap_or("")
+            var("RMP_NUM_THREADS")
+                .unwrap_or("".to_string())
                 .parse::<usize>()
                 .unwrap_or(available_hwthreads),
             1,
